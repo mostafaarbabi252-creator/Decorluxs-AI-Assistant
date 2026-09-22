@@ -83,7 +83,7 @@
         android:layout_height="wrap_content"
         android:hint="Ask DECORLUXS AI"
         android:textColor="@color/text_primary"
-        android:hintTextColor="@color/text_secondary"
+        android:textColorHint="@color/text_secondary"
         android:inputType="textMultiLine"
         android:maxLines="4" />
 
