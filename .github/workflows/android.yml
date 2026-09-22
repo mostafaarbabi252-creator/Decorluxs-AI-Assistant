@@ -36,6 +36,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: decorluxs-ai-pro-v1.2-apk
+          name: decorluxs-ai-pro-v1.4-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

@@ -173,12 +173,16 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     status.setText("● سرور امن متصل است");
                     status.setTextColor(Color.parseColor("#64D39B"));
-                    channelStatus.setText(networkLine + "   •   لمس برای تازه‌سازی");
+                    if (!whatsappReady && !instagramReady) {
+                        channelStatus.setText("واتساپ و اینستاگرام: حالت دستی آماده   •   لمس برای تازه‌سازی");
+                    } else {
+                        channelStatus.setText(networkLine + "   •   لمس برای تازه‌سازی");
+                    }
                     channelStatus.setTextColor(Color.parseColor(
                             whatsappReady || instagramReady ? "#D6B05E" : "#A9A9A9"
                     ));
-                    whatsappButton.setText(whatsappReady ? "واتساپ" : "اتصال واتساپ");
-                    instagramButton.setText(instagramReady ? "اینستاگرام" : "اتصال اینستاگرام");
+                    whatsappButton.setText(whatsappReady ? "واتساپ" : "واتساپ دستی");
+                    instagramButton.setText(instagramReady ? "اینستاگرام" : "اینستاگرام دستی");
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -197,15 +201,34 @@ public class MainActivity extends Activity {
             return;
         }
 
-        if (whatsappConnectConfigured) {
-            actionExecutor.openUrl(backendUrl() + "/api/automation/whatsapp-provider/connect");
-            return;
-        }
+        String[] options = lastAssistantReply.trim().isEmpty()
+                ? new String[]{"باز کردن WhatsApp Business", "اتصال API رسمی (بعداً)"}
+                : new String[]{"ارسال آخرین جواب به واتساپ", "باز کردن WhatsApp Business", "اتصال API رسمی (بعداً)"};
 
         new AlertDialog.Builder(this)
-                .setTitle("اتصال واتساپ")
-                .setMessage("ارائه‌دهنده رسمی واتساپ هنوز روی سرور آماده اتصال نیست.")
-                .setPositiveButton("باشه", null)
+                .setTitle("واتساپ")
+                .setMessage("تا وقتی Meta Cloud API در دسترس نباشه، حالت دستی امن فعاله؛ ارسال نهایی همیشه با تأیید خودت انجام می‌شه.")
+                .setItems(options, (d, which) -> {
+                    if (!lastAssistantReply.trim().isEmpty()) {
+                        if (which == 0) {
+                            actionExecutor.sendToWhatsAppBusiness(lastAssistantReply);
+                            return;
+                        }
+                        if (which == 1) {
+                            actionExecutor.openPackage("com.whatsapp.w4b", "https://www.whatsapp.com/business/");
+                            return;
+                        }
+                        actionExecutor.openUrl(backendUrl() + "/setup/meta-whatsapp");
+                        return;
+                    }
+
+                    if (which == 0) {
+                        actionExecutor.openPackage("com.whatsapp.w4b", "https://www.whatsapp.com/business/");
+                    } else {
+                        actionExecutor.openUrl(backendUrl() + "/setup/meta-whatsapp");
+                    }
+                })
+                .setNegativeButton("لغو", null)
                 .show();
     }
 
@@ -215,15 +238,40 @@ public class MainActivity extends Activity {
             return;
         }
 
-        if (metaOAuthConfigured) {
-            actionExecutor.openUrl(backendUrl() + "/auth/meta/start?device=android");
-            return;
-        }
+        String[] options = lastAssistantReply.trim().isEmpty()
+                ? new String[]{"باز کردن اینستاگرام", "اتصال API رسمی (بعداً)"}
+                : new String[]{"کپی آخرین جواب و باز کردن اینستاگرام", "فقط باز کردن اینستاگرام", "اتصال API رسمی (بعداً)"};
 
         new AlertDialog.Builder(this)
-                .setTitle("اتصال اینستاگرام")
-                .setMessage("بخش Meta Developer هنوز روی سرور تنظیم نشده است. برنامه آماده اتصال است و بعد از تنظیم Meta، همین دکمه فرایند اتصال رسمی را شروع می‌کند.")
-                .setPositiveButton("باشه", null)
+                .setTitle("اینستاگرام")
+                .setMessage("فعلاً حالت دستی فعاله. متن AI کپی می‌شه و اینستاگرام باز می‌شه؛ ارسال نهایی با خودته.")
+                .setItems(options, (d, which) -> {
+                    if (!lastAssistantReply.trim().isEmpty()) {
+                        if (which == 0) {
+                            actionExecutor.copyAndOpenInstagram(lastAssistantReply);
+                            return;
+                        }
+                        if (which == 1) {
+                            actionExecutor.openPackage("com.instagram.android", "https://www.instagram.com/decorluxs/");
+                            return;
+                        }
+                        if (metaOAuthConfigured) {
+                            actionExecutor.openUrl(backendUrl() + "/auth/meta/start?device=android");
+                        } else {
+                            actionExecutor.openUrl(backendUrl() + "/setup/meta-whatsapp");
+                        }
+                        return;
+                    }
+
+                    if (which == 0) {
+                        actionExecutor.openPackage("com.instagram.android", "https://www.instagram.com/decorluxs/");
+                    } else if (metaOAuthConfigured) {
+                        actionExecutor.openUrl(backendUrl() + "/auth/meta/start?device=android");
+                    } else {
+                        actionExecutor.openUrl(backendUrl() + "/setup/meta-whatsapp");
+                    }
+                })
+                .setNegativeButton("لغو", null)
                 .show();
     }
 
