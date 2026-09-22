@@ -16,6 +16,17 @@ public class ApiClient {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
+    private String read(HttpURLConnection c) throws Exception {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(
+                c.getResponseCode() < 400 ? c.getInputStream() : c.getErrorStream(),
+                StandardCharsets.UTF_8));
+        StringBuilder out = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) out.append(line);
+        reader.close();
+        return out.toString();
+    }
+
     public String health() throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(baseUrl + "/health").openConnection();
         c.setRequestMethod("GET");
@@ -23,6 +34,16 @@ public class ApiClient {
         c.setReadTimeout(5000);
         int code = c.getResponseCode();
         return code == 200 ? "online" : "offline";
+    }
+
+    public JSONObject automationStatus() throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(baseUrl + "/api/automation/status").openConnection();
+        c.setRequestMethod("GET");
+        c.setConnectTimeout(7000);
+        c.setReadTimeout(7000);
+        String out = read(c);
+        if (out.isEmpty()) throw new Exception("Empty automation status");
+        return new JSONObject(out);
     }
 
     public JSONObject chat(String message) throws Exception {
@@ -39,15 +60,10 @@ public class ApiClient {
             os.write(body.toString().getBytes(StandardCharsets.UTF_8));
         }
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(
-                c.getResponseCode() < 400 ? c.getInputStream() : c.getErrorStream(), StandardCharsets.UTF_8));
-        StringBuilder out = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) out.append(line);
-        reader.close();
-        if (out.length() == 0) throw new Exception("Empty server response");
-        
-        JSONObject raw = new JSONObject(out.toString());
+        String out = read(c);
+        if (out.isEmpty()) throw new Exception("Empty server response");
+
+        JSONObject raw = new JSONObject(out);
         if (raw.has("text") && !raw.has("reply")) {
             JSONObject normalized = new JSONObject();
             normalized.put("reply", raw.optString("text", ""));

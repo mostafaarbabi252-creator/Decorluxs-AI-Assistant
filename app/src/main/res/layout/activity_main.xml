@@ -7,7 +7,7 @@
     android:paddingStart="18dp"
     android:paddingEnd="18dp"
     android:paddingTop="16dp"
-    android:paddingBottom="12dp">
+    android:paddingBottom="10dp">
 
     <TextView
         android:layout_width="match_parent"
@@ -33,20 +33,31 @@
         android:id="@+id/statusText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="7dp"
         android:gravity="end"
         android:text="در حال بررسی اتصال امن…"
         android:textColor="@color/text_secondary"
         android:textDirection="rtl"
         android:textSize="12sp" />
 
+    <TextView
+        android:id="@+id/channelStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="end"
+        android:text="در حال بررسی اتصال شبکه‌ها…"
+        android:textColor="@color/text_secondary"
+        android:textDirection="rtl"
+        android:textSize="11sp" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="11dp"
         android:background="@drawable/panel_bg"
         android:orientation="vertical"
-        android:padding="10dp">
+        android:padding="9dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -57,19 +68,17 @@
                 android:id="@+id/openWhatsAppButton"
                 style="@style/LuxurySecondaryButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
                 android:text="واتساپ" />
 
-            <Space
-                android:layout_width="8dp"
-                android:layout_height="1dp" />
+            <Space android:layout_width="8dp" android:layout_height="1dp" />
 
             <Button
                 android:id="@+id/openInstagramButton"
                 style="@style/LuxurySecondaryButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
                 android:text="اینستاگرام" />
         </LinearLayout>
@@ -77,28 +86,95 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="7dp"
             android:orientation="horizontal">
 
             <Button
                 android:id="@+id/shareButton"
                 style="@style/LuxurySecondaryButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
-                android:text="اشتراک‌گذاری" />
+                android:text="اشتراک جواب" />
 
-            <Space
-                android:layout_width="8dp"
-                android:layout_height="1dp" />
+            <Space android:layout_width="8dp" android:layout_height="1dp" />
 
             <Button
                 android:id="@+id/settingsButton"
                 style="@style/LuxurySecondaryButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
                 android:text="تنظیمات" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="9dp"
+        android:background="@drawable/panel_bg"
+        android:orientation="vertical"
+        android:padding="9dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="7dp"
+            android:gravity="end"
+            android:text="ابزارهای سریع"
+            android:textColor="@color/gold_soft"
+            android:textDirection="rtl"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/customerReplyButton"
+                style="@style/LuxurySecondaryButton"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:text="پاسخ مشتری" />
+
+            <Space android:layout_width="8dp" android:layout_height="1dp" />
+
+            <Button
+                android:id="@+id/captionButton"
+                style="@style/LuxurySecondaryButton"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:text="کپشن" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/storyButton"
+                style="@style/LuxurySecondaryButton"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:text="استوری" />
+
+            <Space android:layout_width="8dp" android:layout_height="1dp" />
+
+            <Button
+                android:id="@+id/contentIdeaButton"
+                style="@style/LuxurySecondaryButton"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:text="ایده ریلز" />
         </LinearLayout>
     </LinearLayout>
 
@@ -107,7 +183,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="9dp"
         android:background="@drawable/panel_bg"
         android:clipToPadding="false"
         android:fillViewport="true"
@@ -123,7 +199,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="9dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -145,9 +221,7 @@
             android:textDirection="firstStrong"
             android:textSize="15sp" />
 
-        <Space
-            android:layout_width="8dp"
-            android:layout_height="1dp" />
+        <Space android:layout_width="8dp" android:layout_height="1dp" />
 
         <Button
             android:id="@+id/sendButton"
@@ -160,9 +234,9 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="5dp"
         android:gravity="center"
-        android:text="DECORLUXS AI PRO • v1.1"
+        android:text="DECORLUXS AI PRO • v1.2"
         android:textColor="#666666"
         android:textSize="10sp" />
 

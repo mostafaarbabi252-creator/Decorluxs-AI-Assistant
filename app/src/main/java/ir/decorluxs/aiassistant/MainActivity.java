@@ -32,9 +32,11 @@ public class MainActivity extends Activity {
     private ScrollView chatScroll;
     private EditText input;
     private TextView status;
+    private TextView channelStatus;
     private Button sendButton;
     private SharedPreferences prefs;
     private ActionExecutor actionExecutor;
+    private String lastAssistantReply = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +49,7 @@ public class MainActivity extends Activity {
         chatScroll = findViewById(R.id.chatScroll);
         input = findViewById(R.id.messageInput);
         status = findViewById(R.id.statusText);
+        channelStatus = findViewById(R.id.channelStatusText);
         sendButton = findViewById(R.id.sendButton);
 
         sendButton.setOnClickListener(v -> sendMessage());
@@ -63,12 +66,38 @@ public class MainActivity extends Activity {
         findViewById(R.id.openInstagramButton).setOnClickListener(v ->
                 actionExecutor.openPackage("com.instagram.android", "https://www.instagram.com/decorluxs/"));
         findViewById(R.id.shareButton).setOnClickListener(v -> {
-            String text = input.getText().toString().trim();
-            actionExecutor.shareText(text.isEmpty() ? "DECORLUXS" : text);
+            String text = lastAssistantReply.trim();
+            if (text.isEmpty()) text = "هنوز پاسخی برای اشتراک‌گذاری وجود ندارد.";
+            actionExecutor.shareText(text);
         });
         findViewById(R.id.settingsButton).setOnClickListener(v -> showBackendDialog());
 
-        addMessage("DECORLUXS AI", "سلام 👋 من دستیار هوشمند کسب‌وکار دکورلوکس هستم. برای پاسخ مشتری، کپشن، ایده محتوا و کارهای روزمره کنارت هستم.", false);
+        findViewById(R.id.customerReplyButton).setOnClickListener(v ->
+                showQuickTool(
+                        "پاسخ مشتری",
+                        "پیام مشتری را اینجا وارد کن",
+                        "به پیام مشتری زیر یک پاسخ حرفه‌ای، کوتاه، صمیمی و فروش‌محور برای برند دکورلوکس بده. فقط متن آماده ارسال را بنویس و توضیح اضافه نده:\n\n"
+                ));
+        findViewById(R.id.captionButton).setOnClickListener(v ->
+                showQuickTool(
+                        "کپشن اینستاگرام",
+                        "محصول و ویژگی‌هایش را بنویس",
+                        "برای محصول زیر یک کپشن فارسی شیک، طبیعی و فروش‌محور برای اینستاگرام دکورلوکس بنویس. یک هوک کوتاه، مزیت محصول، CTA و حداکثر دو هشتگ مرتبط داشته باشد. فقط متن آماده انتشار را بده:\n\n"
+                ));
+        findViewById(R.id.storyButton).setOnClickListener(v ->
+                showQuickTool(
+                        "استوری سریالی",
+                        "محصول یا موضوع استوری را بنویس",
+                        "برای موضوع زیر 4 استوری سریالی کوتاه و طبیعی برای پیج دکورلوکس بنویس. استوری اول هوک، دوم همذات‌پنداری یا مسئله، سوم معرفی مزیت، چهارم CTA باشد. متن‌ها کوتاه و قابل کپی باشند:\n\n"
+                ));
+        findViewById(R.id.contentIdeaButton).setOnClickListener(v ->
+                showQuickTool(
+                        "ایده ریلز",
+                        "محصول یا هدف محتوا را بنویس",
+                        "برای موضوع زیر 5 ایده ریلز واقعی و قابل اجرا برای پیج دکورلوکس بده. برای هر ایده یک هوک و یک توضیح خیلی کوتاه اجرا بنویس. ایده‌ها فروش‌محور اما غیرکلیشه‌ای باشند:\n\n"
+                ));
+
+        addMessage("DECORLUXS AI", "سلام 👋 من دستیار هوشمند کسب‌وکار دکورلوکس هستم. می‌تونی مستقیم باهام چت کنی یا از ابزارهای سریع بالا استفاده کنی.", false);
         checkBackend();
     }
 
@@ -79,17 +108,36 @@ public class MainActivity extends Activity {
     private void checkBackend() {
         status.setText("● در حال بررسی اتصال امن…");
         status.setTextColor(Color.parseColor("#A9A9A9"));
+        channelStatus.setText("در حال بررسی واتساپ و اینستاگرام…");
+        channelStatus.setTextColor(Color.parseColor("#A9A9A9"));
+
         pool.submit(() -> {
             try {
-                new ApiClient(backendUrl()).health();
+                ApiClient api = new ApiClient(backendUrl());
+                api.health();
+                JSONObject automation = api.automationStatus();
+
+                boolean whatsappReady = automation.optBoolean("whatsappReady", false);
+                boolean instagramReady = automation.optBoolean("instagramReady", false);
+
+                String networkLine =
+                        "واتساپ: " + (whatsappReady ? "آماده" : "نیاز به اتصال")
+                        + "   •   اینستاگرام: " + (instagramReady ? "آماده" : "نیاز به اتصال");
+
                 runOnUiThread(() -> {
                     status.setText("● سرور امن متصل است");
                     status.setTextColor(Color.parseColor("#64D39B"));
+                    channelStatus.setText(networkLine);
+                    channelStatus.setTextColor(Color.parseColor(
+                            whatsappReady || instagramReady ? "#D6B05E" : "#A9A9A9"
+                    ));
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     status.setText("● اتصال سرور برقرار نیست");
                     status.setTextColor(Color.parseColor("#FF737A"));
+                    channelStatus.setText("وضعیت شبکه‌ها در دسترس نیست");
+                    channelStatus.setTextColor(Color.parseColor("#A9A9A9"));
                 });
             }
         });
@@ -98,15 +146,20 @@ public class MainActivity extends Activity {
     private void sendMessage() {
         String message = input.getText().toString().trim();
         if (message.isEmpty() || !sendButton.isEnabled()) return;
-
         input.setText("");
+        sendPreparedMessage(message, message);
+    }
+
+    private void sendPreparedMessage(String displayText, String prompt) {
+        if (!sendButton.isEnabled()) return;
+
         setSending(true);
-        addMessage("شما", message, true);
+        addMessage("شما", displayText, true);
         addMessage("DECORLUXS AI", "در حال فکر کردن…", false);
 
         pool.submit(() -> {
             try {
-                JSONObject response = new ApiClient(backendUrl()).chat(message);
+                JSONObject response = new ApiClient(backendUrl()).chat(prompt);
                 String reply = response.optString("reply", "پاسخی دریافت نشد.");
                 JSONObject action = response.optJSONObject("action");
                 runOnUiThread(() -> {
@@ -123,6 +176,30 @@ public class MainActivity extends Activity {
                 });
             }
         });
+    }
+
+    private void showQuickTool(String title, String hint, String promptPrefix) {
+        EditText box = new EditText(this);
+        box.setHint(hint);
+        box.setMinLines(3);
+        box.setMaxLines(7);
+        box.setGravity(Gravity.RIGHT | Gravity.TOP);
+        box.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG_RTL);
+        box.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        int p = dp(14);
+        box.setPadding(p, p, p, p);
+
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(box)
+                .setNegativeButton("لغو", null)
+                .setPositiveButton("بساز", (d, w) -> {
+                    String detail = box.getText().toString().trim();
+                    if (!detail.isEmpty()) {
+                        sendPreparedMessage(title + "\n" + detail, promptPrefix + detail);
+                    }
+                })
+                .show();
     }
 
     private void setSending(boolean sending) {
@@ -165,7 +242,7 @@ public class MainActivity extends Activity {
 
         new AlertDialog.Builder(this)
                 .setTitle("تنظیمات سرور")
-                .setMessage("آدرس سرور امن DecorLux را وارد کن. کلیدهای سرویس‌های هوش مصنوعی و شبکه‌های اجتماعی فقط روی سرور نگهداری می‌شوند.")
+                .setMessage("آدرس سرور امن DecorLux را وارد کن.")
                 .setView(box)
                 .setNegativeButton("لغو", null)
                 .setPositiveButton("ذخیره", (d, w) -> {
@@ -236,6 +313,7 @@ public class MainActivity extends Activity {
     }
 
     private void replaceLastAssistant(String text) {
+        lastAssistantReply = text;
         int count = chatContainer.getChildCount();
         if (count == 0) return;
         View last = chatContainer.getChildAt(count - 1);

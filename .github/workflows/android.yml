@@ -19,6 +19,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Restore stable development signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: decorluxs-debug-keystore-v1
+
       - name: Set up Gradle 9.6
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -30,6 +36,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: decorluxs-ai-debug-apk
+          name: decorluxs-ai-pro-v1.2-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
