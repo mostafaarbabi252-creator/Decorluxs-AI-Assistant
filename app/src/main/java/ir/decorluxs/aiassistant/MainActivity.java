@@ -57,7 +57,7 @@ public class MainActivity extends Activity {
     }
 
     private String backendUrl() {
-        return prefs.getString("backend_url", "http://10.0.2.2:8787");
+        return prefs.getString("backend_url", "https://decorlux-backend-production.up.railway.app");
     }
 
     private void checkBackend() {
