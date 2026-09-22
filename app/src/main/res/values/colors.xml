@@ -1,0 +1,10 @@
+<resources>
+    <color name="black">#090909</color>
+    <color name="charcoal">#151515</color>
+    <color name="panel">#202020</color>
+    <color name="gold">#D7B46A</color>
+    <color name="text_primary">#F5F5F5</color>
+    <color name="text_secondary">#B8B8B8</color>
+    <color name="success">#6ED6A0</color>
+    <color name="danger">#FF7C7C</color>
+</resources>
