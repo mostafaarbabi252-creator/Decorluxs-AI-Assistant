@@ -2,10 +2,12 @@ package ir.decorluxs.aiassistant;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.SpannableStringBuilder;
@@ -34,9 +36,16 @@ public class MainActivity extends Activity {
     private TextView status;
     private TextView channelStatus;
     private Button sendButton;
+    private Button whatsappButton;
+    private Button instagramButton;
     private SharedPreferences prefs;
     private ActionExecutor actionExecutor;
     private String lastAssistantReply = "";
+
+    private volatile boolean whatsappReady = false;
+    private volatile boolean instagramReady = false;
+    private volatile boolean whatsappConnectConfigured = false;
+    private volatile boolean metaOAuthConfigured = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +60,8 @@ public class MainActivity extends Activity {
         status = findViewById(R.id.statusText);
         channelStatus = findViewById(R.id.channelStatusText);
         sendButton = findViewById(R.id.sendButton);
+        whatsappButton = findViewById(R.id.openWhatsAppButton);
+        instagramButton = findViewById(R.id.openInstagramButton);
 
         sendButton.setOnClickListener(v -> sendMessage());
         input.setOnEditorActionListener((v, actionId, event) -> {
@@ -61,16 +72,16 @@ public class MainActivity extends Activity {
             return false;
         });
 
-        findViewById(R.id.openWhatsAppButton).setOnClickListener(v ->
-                actionExecutor.openPackage("com.whatsapp.w4b", "https://www.whatsapp.com/business/"));
-        findViewById(R.id.openInstagramButton).setOnClickListener(v ->
-                actionExecutor.openPackage("com.instagram.android", "https://www.instagram.com/decorluxs/"));
+        whatsappButton.setOnClickListener(v -> onWhatsAppClicked());
+        instagramButton.setOnClickListener(v -> onInstagramClicked());
+
         findViewById(R.id.shareButton).setOnClickListener(v -> {
             String text = lastAssistantReply.trim();
             if (text.isEmpty()) text = "هنوز پاسخی برای اشتراک‌گذاری وجود ندارد.";
             actionExecutor.shareText(text);
         });
         findViewById(R.id.settingsButton).setOnClickListener(v -> showBackendDialog());
+        channelStatus.setOnClickListener(v -> checkBackend());
 
         findViewById(R.id.customerReplyButton).setOnClickListener(v ->
                 showQuickTool(
@@ -98,6 +109,39 @@ public class MainActivity extends Activity {
                 ));
 
         addMessage("DECORLUXS AI", "سلام 👋 من دستیار هوشمند کسب‌وکار دکورلوکس هستم. می‌تونی مستقیم باهام چت کنی یا از ابزارهای سریع بالا استفاده کنی.", false);
+        handleDeepLink(getIntent());
+        checkBackend();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (status != null) checkBackend();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleDeepLink(intent);
+    }
+
+    private void handleDeepLink(Intent intent) {
+        if (intent == null || intent.getData() == null) return;
+        Uri data = intent.getData();
+        if (!"decorluxaipro".equals(data.getScheme()) || !"meta-connected".equals(data.getHost())) return;
+
+        String token = data.getQueryParameter("token");
+        if (token != null && !token.isEmpty()) {
+            prefs.edit().putString("automation_admin_token", token).apply();
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("اتصال Meta انجام شد ✅")
+                .setMessage("اتصال حساب ثبت شد. وضعیت واتساپ و اینستاگرام دوباره بررسی می‌شود.")
+                .setPositiveButton("باشه", null)
+                .show();
+
         checkBackend();
     }
 
@@ -117,8 +161,10 @@ public class MainActivity extends Activity {
                 api.health();
                 JSONObject automation = api.automationStatus();
 
-                boolean whatsappReady = automation.optBoolean("whatsappReady", false);
-                boolean instagramReady = automation.optBoolean("instagramReady", false);
+                whatsappReady = automation.optBoolean("whatsappReady", false);
+                instagramReady = automation.optBoolean("instagramReady", false);
+                whatsappConnectConfigured = automation.optBoolean("whatsappConnectConfigured", false);
+                metaOAuthConfigured = automation.optBoolean("metaOAuthConfigured", false);
 
                 String networkLine =
                         "واتساپ: " + (whatsappReady ? "آماده" : "نیاز به اتصال")
@@ -127,10 +173,12 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     status.setText("● سرور امن متصل است");
                     status.setTextColor(Color.parseColor("#64D39B"));
-                    channelStatus.setText(networkLine);
+                    channelStatus.setText(networkLine + "   •   لمس برای تازه‌سازی");
                     channelStatus.setTextColor(Color.parseColor(
                             whatsappReady || instagramReady ? "#D6B05E" : "#A9A9A9"
                     ));
+                    whatsappButton.setText(whatsappReady ? "واتساپ" : "اتصال واتساپ");
+                    instagramButton.setText(instagramReady ? "اینستاگرام" : "اتصال اینستاگرام");
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -141,6 +189,42 @@ public class MainActivity extends Activity {
                 });
             }
         });
+    }
+
+    private void onWhatsAppClicked() {
+        if (whatsappReady) {
+            actionExecutor.openPackage("com.whatsapp.w4b", "https://www.whatsapp.com/business/");
+            return;
+        }
+
+        if (whatsappConnectConfigured) {
+            actionExecutor.openUrl(backendUrl() + "/api/automation/whatsapp-provider/connect");
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("اتصال واتساپ")
+                .setMessage("ارائه‌دهنده رسمی واتساپ هنوز روی سرور آماده اتصال نیست.")
+                .setPositiveButton("باشه", null)
+                .show();
+    }
+
+    private void onInstagramClicked() {
+        if (instagramReady) {
+            actionExecutor.openPackage("com.instagram.android", "https://www.instagram.com/decorluxs/");
+            return;
+        }
+
+        if (metaOAuthConfigured) {
+            actionExecutor.openUrl(backendUrl() + "/auth/meta/start?device=android");
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("اتصال اینستاگرام")
+                .setMessage("بخش Meta Developer هنوز روی سرور تنظیم نشده است. برنامه آماده اتصال است و بعد از تنظیم Meta، همین دکمه فرایند اتصال رسمی را شروع می‌کند.")
+                .setPositiveButton("باشه", null)
+                .show();
     }
 
     private void sendMessage() {
