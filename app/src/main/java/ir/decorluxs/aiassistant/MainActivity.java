@@ -4,9 +4,17 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
+import android.view.Gravity;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -24,6 +32,7 @@ public class MainActivity extends Activity {
     private ScrollView chatScroll;
     private EditText input;
     private TextView status;
+    private Button sendButton;
     private SharedPreferences prefs;
     private ActionExecutor actionExecutor;
 
@@ -38,9 +47,16 @@ public class MainActivity extends Activity {
         chatScroll = findViewById(R.id.chatScroll);
         input = findViewById(R.id.messageInput);
         status = findViewById(R.id.statusText);
+        sendButton = findViewById(R.id.sendButton);
 
-        Button send = findViewById(R.id.sendButton);
-        send.setOnClickListener(v -> sendMessage());
+        sendButton.setOnClickListener(v -> sendMessage());
+        input.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                sendMessage();
+                return true;
+            }
+            return false;
+        });
 
         findViewById(R.id.openWhatsAppButton).setOnClickListener(v ->
                 actionExecutor.openPackage("com.whatsapp.w4b", "https://www.whatsapp.com/business/"));
@@ -52,7 +68,7 @@ public class MainActivity extends Activity {
         });
         findViewById(R.id.settingsButton).setOnClickListener(v -> showBackendDialog());
 
-        addMessage("DECORLUXS AI", "سلام 👋 من دستیار امن کسب‌وکار تو هستم. می‌تونی برای کپشن، پاسخ مشتری، ایده محتوا و کارهای روزمره ازم کمک بگیری.", false);
+        addMessage("DECORLUXS AI", "سلام 👋 من دستیار هوشمند کسب‌وکار دکورلوکس هستم. برای پاسخ مشتری، کپشن، ایده محتوا و کارهای روزمره کنارت هستم.", false);
         checkBackend();
     }
 
@@ -61,18 +77,19 @@ public class MainActivity extends Activity {
     }
 
     private void checkBackend() {
-        status.setText("Checking secure backend…");
+        status.setText("● در حال بررسی اتصال امن…");
+        status.setTextColor(Color.parseColor("#A9A9A9"));
         pool.submit(() -> {
             try {
-                String health = new ApiClient(backendUrl()).health();
+                new ApiClient(backendUrl()).health();
                 runOnUiThread(() -> {
-                    status.setText("Secure backend: " + health);
-                    status.setTextColor(Color.parseColor("#6ED6A0"));
+                    status.setText("● سرور امن متصل است");
+                    status.setTextColor(Color.parseColor("#64D39B"));
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
-                    status.setText("Backend offline — tap Settings to set URL");
-                    status.setTextColor(Color.parseColor("#FF7C7C"));
+                    status.setText("● اتصال سرور برقرار نیست");
+                    status.setTextColor(Color.parseColor("#FF737A"));
                 });
             }
         });
@@ -80,34 +97,46 @@ public class MainActivity extends Activity {
 
     private void sendMessage() {
         String message = input.getText().toString().trim();
-        if (message.isEmpty()) return;
+        if (message.isEmpty() || !sendButton.isEnabled()) return;
+
         input.setText("");
-        addMessage("You", message, true);
-        addMessage("DECORLUXS AI", "…", false);
+        setSending(true);
+        addMessage("شما", message, true);
+        addMessage("DECORLUXS AI", "در حال فکر کردن…", false);
 
         pool.submit(() -> {
             try {
                 JSONObject response = new ApiClient(backendUrl()).chat(message);
-                String reply = response.optString("reply", "No response");
+                String reply = response.optString("reply", "پاسخی دریافت نشد.");
                 JSONObject action = response.optJSONObject("action");
                 runOnUiThread(() -> {
                     replaceLastAssistant(reply);
+                    setSending(false);
                     if (action != null && action.optBoolean("requiresApproval", true)) {
                         showApproval(action);
                     }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> replaceLastAssistant("اتصال به سرور برقرار نشد. از Settings آدرس Backend را بررسی کن."));
+                runOnUiThread(() -> {
+                    replaceLastAssistant("درخواست انجام نشد. اتصال اینترنت یا سرور را بررسی کن و دوباره امتحان کن.");
+                    setSending(false);
+                });
             }
         });
     }
 
+    private void setSending(boolean sending) {
+        sendButton.setEnabled(!sending);
+        sendButton.setText(sending ? "…" : "ارسال");
+        input.setEnabled(!sending);
+    }
+
     private void showApproval(JSONObject action) {
         String type = action.optString("type", "ACTION");
-        String description = action.optString("description", "Requested action");
+        String description = action.optString("description", "عملیات درخواستی");
         new AlertDialog.Builder(this)
                 .setTitle("تأیید عملیات")
-                .setMessage(description + "\n\nنوع: " + type + "\n\nبدون تأیید شما اجرا نمی‌شود.")
+                .setMessage(description + "\n\nنوع: " + type + "\n\nاین عملیات بدون تأیید شما اجرا نمی‌شود.")
                 .setNegativeButton("رد", null)
                 .setPositiveButton("تأیید", (d, w) -> executeApprovedAction(action))
                 .show();
@@ -122,7 +151,7 @@ public class MainActivity extends Activity {
             case "OPEN_WHATSAPP": actionExecutor.openPackage("com.whatsapp.w4b", "https://www.whatsapp.com/business/"); break;
             case "OPEN_INSTAGRAM": actionExecutor.openPackage("com.instagram.android", "https://www.instagram.com/decorluxs/"); break;
             case "OPEN_SETTINGS": actionExecutor.openSettings(); break;
-            default: addMessage("System", "این عملیات هنوز به اجراکننده امن متصل نشده است.", false);
+            default: addMessage("سیستم", "این عملیات هنوز به اجراکننده امن متصل نشده است.", false);
         }
     }
 
@@ -130,12 +159,13 @@ public class MainActivity extends Activity {
         EditText box = new EditText(this);
         box.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         box.setText(backendUrl());
-        int p = (int) (16 * getResources().getDisplayMetrics().density);
+        box.setSelectAllOnFocus(true);
+        int p = dp(16);
         box.setPadding(p, p, p, p);
 
         new AlertDialog.Builder(this)
-                .setTitle("Backend URL")
-                .setMessage("آدرس سرور امن را وارد کن. کلید Gemini و Meta فقط روی سرور می‌مانند.")
+                .setTitle("تنظیمات سرور")
+                .setMessage("آدرس سرور امن DecorLux را وارد کن. کلیدهای سرویس‌های هوش مصنوعی و شبکه‌های اجتماعی فقط روی سرور نگهداری می‌شوند.")
                 .setView(box)
                 .setNegativeButton("لغو", null)
                 .setPositiveButton("ذخیره", (d, w) -> {
@@ -147,26 +177,76 @@ public class MainActivity extends Activity {
 
     private void addMessage(String who, String text, boolean user) {
         TextView v = new TextView(this);
-        v.setText(who + "\n" + text);
-        v.setTextColor(Color.parseColor(user ? "#F5F5F5" : "#D7B46A"));
+        v.setText(formatMessage(who, text, user));
         v.setTextSize(15);
-        int p = (int) (12 * getResources().getDisplayMetrics().density);
-        v.setPadding(p, p, p, p);
+        v.setLineSpacing(0f, 1.12f);
+        v.setGravity(Gravity.RIGHT);
+        v.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG_RTL);
+        v.setMaxWidth((int) (getResources().getDisplayMetrics().widthPixels * 0.88f));
+
+        int horizontal = dp(14);
+        int vertical = dp(11);
+        v.setPadding(horizontal, vertical, horizontal, vertical);
+
+        GradientDrawable bubble = new GradientDrawable();
+        bubble.setShape(GradientDrawable.RECTANGLE);
+        bubble.setColor(Color.parseColor(user ? "#242424" : "#111111"));
+        bubble.setCornerRadius(dp(18));
+        bubble.setStroke(dp(1), Color.parseColor(user ? "#373737" : "#66532E"));
+        v.setBackground(bubble);
+
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, 0, 0, p / 2);
+        lp.gravity = user ? Gravity.END : Gravity.START;
+        lp.setMargins(0, 0, 0, dp(9));
         v.setLayoutParams(lp);
-        v.setBackgroundColor(Color.parseColor(user ? "#292929" : "#151515"));
+
         chatContainer.addView(v);
         chatScroll.post(() -> chatScroll.fullScroll(View.FOCUS_DOWN));
+    }
+
+    private SpannableStringBuilder formatMessage(String who, String text, boolean user) {
+        SpannableStringBuilder out = new SpannableStringBuilder();
+        int labelStart = 0;
+        out.append(who);
+        int labelEnd = out.length();
+        out.setSpan(
+                new ForegroundColorSpan(Color.parseColor(user ? "#D9D9D9" : "#D6B05E")),
+                labelStart,
+                labelEnd,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        );
+        out.setSpan(
+                new StyleSpan(Typeface.BOLD),
+                labelStart,
+                labelEnd,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        );
+        out.append("\n");
+        int bodyStart = out.length();
+        out.append(text);
+        out.setSpan(
+                new ForegroundColorSpan(Color.parseColor("#F5F1E8")),
+                bodyStart,
+                out.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        );
+        return out;
     }
 
     private void replaceLastAssistant(String text) {
         int count = chatContainer.getChildCount();
         if (count == 0) return;
         View last = chatContainer.getChildAt(count - 1);
-        if (last instanceof TextView) ((TextView) last).setText("DECORLUXS AI\n" + text);
+        if (last instanceof TextView) {
+            ((TextView) last).setText(formatMessage("DECORLUXS AI", text, false));
+        }
+        chatScroll.post(() -> chatScroll.fullScroll(View.FOCUS_DOWN));
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @Override
