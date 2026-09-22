@@ -26,7 +26,7 @@ public class ApiClient {
     }
 
     public JSONObject chat(String message) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(baseUrl + "/api/chat").openConnection();
+        HttpURLConnection c = (HttpURLConnection) new URL(baseUrl + "/api/ai").openConnection();
         c.setRequestMethod("POST");
         c.setRequestProperty("Content-Type", "application/json; charset=utf-8");
         c.setDoOutput(true);
@@ -46,6 +46,14 @@ public class ApiClient {
         while ((line = reader.readLine()) != null) out.append(line);
         reader.close();
         if (out.length() == 0) throw new Exception("Empty server response");
-        return new JSONObject(out.toString());
+        
+        JSONObject raw = new JSONObject(out.toString());
+        if (raw.has("text") && !raw.has("reply")) {
+            JSONObject normalized = new JSONObject();
+            normalized.put("reply", raw.optString("text", ""));
+            normalized.put("action", JSONObject.NULL);
+            return normalized;
+        }
+        return raw;
     }
 }
